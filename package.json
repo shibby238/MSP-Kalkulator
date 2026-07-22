@@ -1,0 +1,9 @@
+{
+  "name": "partner-managed-services-kalkulator",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Partner-Kalkulator für Managed Services mit serverseitigem Provisionsrechner",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
