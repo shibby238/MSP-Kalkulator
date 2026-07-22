@@ -214,6 +214,23 @@
   </form>
 </div>
 
+<div id="password-setup-gate" class="login-gate" hidden>
+  <h2>Passwort festlegen</h2>
+  <p>Willkommen! Bitte legen Sie einmalig ein Passwort für Ihren Partner-Zugang fest.</p>
+  <form id="password-setup-form">
+    <div class="login-field">
+      <label for="setup-password">Neues Passwort</label>
+      <input type="password" id="setup-password" autocomplete="new-password" minlength="8" required>
+    </div>
+    <div class="login-field">
+      <label for="setup-password-repeat">Passwort wiederholen</label>
+      <input type="password" id="setup-password-repeat" autocomplete="new-password" minlength="8" required>
+    </div>
+    <p class="login-error" id="setup-error">Passwörter stimmen nicht überein oder sind zu kurz (mind. 8 Zeichen).</p>
+    <button type="submit" class="btn btn-primary" id="btn-setup-password" style="width:100%;">Passwort speichern</button>
+  </form>
+</div>
+
 <div id="app-content" hidden>
 <div class="intro">
   <p>Stellen Sie Ihre Managed Services individuell zusammen. Tragen Sie bei den gewünschten Positionen die jeweilige Anzahl ein — rechts sehen Sie Ihre monatlichen und einmaligen Kosten in Echtzeit.</p>
@@ -792,9 +809,26 @@
   const supabaseClient = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
   let appStarted = false;
 
+  // Einladungs-/Passwort-Reset-Links landen mit "type=invite" bzw.
+  // "type=recovery" im URL-Fragment. In diesem Fall wird der Partner zwar
+  // automatisch eingeloggt, hat aber noch kein eigenes Passwort gesetzt —
+  // das holen wir hier einmalig nach, bevor der Kalkulator freigeschaltet wird.
+  let pendingPasswordSetup = (function(){
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return params.get('type') === 'invite' || params.get('type') === 'recovery';
+  })();
+
   function showApp(session){
     window.currentSession = session;
+    if (pendingPasswordSetup){
+      document.getElementById('login-gate').hidden = true;
+      document.getElementById('password-setup-gate').hidden = false;
+      document.getElementById('app-content').hidden = true;
+      document.getElementById('btn-logout').hidden = false;
+      return;
+    }
     document.getElementById('login-gate').hidden = true;
+    document.getElementById('password-setup-gate').hidden = true;
     document.getElementById('app-content').hidden = false;
     document.getElementById('btn-logout').hidden = false;
     if (!appStarted){ appStarted = true; startApp(); }
@@ -804,9 +838,38 @@
   function showLogin(){
     window.currentSession = null;
     document.getElementById('login-gate').hidden = false;
+    document.getElementById('password-setup-gate').hidden = true;
     document.getElementById('app-content').hidden = true;
     document.getElementById('btn-logout').hidden = true;
   }
+
+  document.getElementById('password-setup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = document.getElementById('setup-password').value;
+    const pwRepeat = document.getElementById('setup-password-repeat').value;
+    const errorEl = document.getElementById('setup-error');
+    const btnSetup = document.getElementById('btn-setup-password');
+    errorEl.classList.remove('show');
+
+    if (pw.length < 8 || pw !== pwRepeat){
+      errorEl.classList.add('show');
+      return;
+    }
+
+    btnSetup.disabled = true;
+    const { error } = await supabaseClient.auth.updateUser({ password: pw });
+    btnSetup.disabled = false;
+
+    if (error){
+      errorEl.textContent = 'Fehler beim Speichern: ' + error.message;
+      errorEl.classList.add('show');
+      return;
+    }
+
+    pendingPasswordSetup = false;
+    history.replaceState(null, '', window.location.pathname);
+    showApp(window.currentSession);
+  });
 
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
