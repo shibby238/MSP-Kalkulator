@@ -182,6 +182,9 @@
   .login-error{font-size:.82rem; color:#B4383A; margin:.2rem 0 1rem; display:none;}
   .login-error.show{display:block;}
   #btn-logout{font-size:.78rem; padding:.4rem .8rem;}
+
+  .commission-toggle{background:none; border:none; cursor:pointer; font-size:.85rem; padding:0 0 0 .4rem; line-height:1; color:var(--grey-soft); vertical-align:middle;}
+  .commission-toggle:hover{color:var(--lime-dark);}
 </style>
 </head>
 <body>
@@ -292,7 +295,7 @@
           <span class="total-value" id="total-onetime"></span>
         </div>
         <div class="total-row onetime" id="row-commission" hidden>
-          <span class="total-label">Ihre Provision (mtl., netto)</span>
+          <span class="total-label">Ihre Provision (mtl., netto)<button type="button" id="btn-toggle-commission" class="commission-toggle" title="Provision ein-/ausblenden">Anzeigen</button></span>
           <span class="total-value" id="total-commission">–</span>
         </div>
         <span class="total-note">Alle Preise zzgl. gesetzlicher MwSt. Unverbindliche Kalkulation auf Basis der aktuellen Preisliste, vorbehaltlich individueller Abstimmung.</span>
@@ -633,6 +636,22 @@
   // serverseitig und werden dem Partner nie ausgeliefert, nur der fertige
   // Provisionsbetrag kommt zurück.
   let commissionDebounce = null;
+  let commissionVisible = false;
+  let lastCommission = null;
+
+  function renderCommissionValue(){
+    const valueEl = document.getElementById('total-commission');
+    const toggleBtn = document.getElementById('btn-toggle-commission');
+    if (lastCommission === null){ valueEl.textContent = '–'; return; }
+    valueEl.textContent = commissionVisible ? fmtEUR(lastCommission) : '••••••';
+    toggleBtn.textContent = commissionVisible ? 'Ausblenden' : 'Anzeigen';
+  }
+
+  document.getElementById('btn-toggle-commission').addEventListener('click', () => {
+    commissionVisible = !commissionVisible;
+    renderCommissionValue();
+  });
+
   function updateCommission(){
     clearTimeout(commissionDebounce);
     commissionDebounce = setTimeout(fetchCommission, 350);
@@ -640,7 +659,6 @@
 
   async function fetchCommission(){
     const row = document.getElementById('row-commission');
-    const valueEl = document.getElementById('total-commission');
     const session = window.currentSession;
     if (!session){ row.hidden = true; return; }
 
@@ -652,7 +670,8 @@
       });
       if (!res.ok){ row.hidden = true; return; }
       const data = await res.json();
-      valueEl.textContent = fmtEUR(data.commission);
+      lastCommission = data.commission;
+      renderCommissionValue();
       row.hidden = false;
     } catch (err) {
       row.hidden = true;
