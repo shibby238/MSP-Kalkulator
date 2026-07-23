@@ -247,7 +247,7 @@
       <div class="category-body" style="padding-top:1rem;">
         <div class="eckdaten-grid">
           <div class="eckdaten-field">
-            <label for="k-kunde">Kundenname</label>
+            <label for="k-kunde">Endkundename</label>
             <input type="text" id="k-kunde" placeholder="Firma GmbH">
           </div>
           <div class="eckdaten-field">
@@ -255,7 +255,7 @@
             <input type="text" id="k-ansprechpartner" placeholder="Vor- und Nachname">
           </div>
           <div class="eckdaten-field">
-            <label for="k-vb">Zuständiger VB</label>
+            <label for="k-vb">Ansprechpartner Partner</label>
             <input type="text" id="k-vb" placeholder="Name des Vertriebsbeauftragten">
           </div>
         </div>
@@ -306,9 +306,9 @@
       </div>
       <div class="summary-actions">
         <button class="btn btn-outline" id="btn-pdf" disabled>Als PDF herunterladen</button>
-        <button class="btn btn-primary" id="btn-request" disabled>An Inside Sales übertragen</button>
+        <button class="btn btn-primary" id="btn-request" disabled>An Kutzschbach Vertrieb übertragen</button>
       </div>
-      <p class="confirm-note" id="confirm-note">E-Mail-Entwurf an Inside Sales wurde geöffnet. Bitte im E-Mail-Programm absenden.</p>
+      <p class="confirm-note" id="confirm-note">E-Mail-Entwurf an Kutzschbach Vertrieb wurde geöffnet. Bitte im E-Mail-Programm absenden.</p>
     </div>
   </aside>
 </main>
@@ -755,14 +755,17 @@
       const vb = document.getElementById('k-vb').value.trim();
       const rule = '----------------------------------------';
 
-      let body = 'ANFRAGE MANAGED SERVICES — KUTZSCHBACH INNOVATIONS\n';
+      const partnerEmail = (window.currentSession && window.currentSession.user && window.currentSession.user.email) || '-';
+
+      let body = 'PARTNERANFRAGE — MANAGED SERVICES — KUTZSCHBACH INNOVATIONS\n';
       body += rule + '\n';
-      body += 'Referenz: ' + sessionRef + '   ·   Datum: ' + sessionDate + '\n\n';
+      body += 'Referenz: ' + sessionRef + '   ·   Datum: ' + sessionDate + '\n';
+      body += 'Angemeldeter Partner: ' + partnerEmail + '\n\n';
 
       body += 'KUNDE\n' + rule + '\n';
       body += 'Kunde:              ' + kunde + '\n';
       body += 'Ansprechpartner:    ' + (ansprechpartner || '-') + '\n';
-      body += 'Zuständiger VB:     ' + (vb || '-') + '\n\n';
+      body += 'Ansprechpartner Partner: ' + (vb || '-') + '\n\n';
 
       const monthlyLines = lines.filter(l => l.group === 'monthly');
       const onetimeLines = lines.filter(l => l.group === 'onetime');
