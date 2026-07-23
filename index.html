@@ -309,6 +309,7 @@
         <textarea id="bemerkung" placeholder="Zusätzliche Hinweise für Inside Sales …"></textarea>
       </div>
       <div class="summary-actions">
+        <button class="btn btn-outline" id="btn-reset">Zurücksetzen</button>
         <button class="btn btn-outline" id="btn-pdf" disabled>Als PDF herunterladen</button>
         <button class="btn btn-primary" id="btn-request" disabled>An Kutzschbach Vertrieb übertragen</button>
       </div>
@@ -825,6 +826,28 @@
   document.getElementById('summary-ref').textContent = 'Referenz ' + sessionRef;
   document.getElementById('summary-date').textContent = sessionDate;
 
+  function resetForm(){
+    Object.keys(qty).forEach(id => delete qty[id]);
+    Object.keys(adjust).forEach(id => delete adjust[id]);
+
+    document.querySelectorAll('#categories input[type="number"], #onboarding-rows input[type="number"]').forEach(input => { input.value = ''; });
+    document.querySelectorAll('#categories input[type="radio"]').forEach(input => { input.checked = false; });
+
+    document.getElementById('k-kunde').value = '';
+    document.getElementById('k-ansprechpartner').value = '';
+    document.getElementById('k-vb').value = '';
+    document.getElementById('bemerkung').value = '';
+    document.getElementById('confirm-note').classList.remove('show');
+
+    CATEGORIES.forEach(cat => {
+      if (cat.mode === 'request') return;
+      cat.items.forEach(item => refreshItem(item.id, { skipSummary: true }));
+      refreshCategorySum(cat.id);
+    });
+
+    renderSummary();
+  }
+
   function startApp(){
     renderCategories();
     renderOnboardingCard();
@@ -833,6 +856,7 @@
     renderSummary();
     setupInsideSalesTransfer();
     document.getElementById('btn-pdf').addEventListener('click', downloadPdf);
+    document.getElementById('btn-reset').addEventListener('click', resetForm);
   }
 
   // --- Partner-Login (Supabase Auth) --------------------------------------
