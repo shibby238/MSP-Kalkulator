@@ -48,7 +48,7 @@
       { id:'fwrc200c', label:'managed Firewall — RC200 Cluster', sub:'max. 50 User', price:299, unit:'Firewall' },
       { id:'dns', label:'Blueshield DNS Filter', price:3.33, unit:'User' },
       { id:'edr', label:'managed Endpoint Detection & Response', price:6.9, unit:'Client / Server', note:'Rabattierung ab 50 Geräten möglich' },
-      { id:'siem', label:'managed SIEM', sub:'Client / Server / Firewall, …', price:200, unit:'Einheit', note:'Rabattierung ab 50 Quellen möglich' }
+      { id:'siem', label:'managed SIEM', sub:'Client / Server / Firewall, …', price:3.5, unit:'Einheit', note:'Rabattierung ab 50 Quellen möglich' }
     ]},
     { id:'monitoring', title:'Managed Monitoring', mode:'qty', items:[
       { id:'mon25', label:'25 Sensoren', price:50, unit:'Paket' },
