@@ -298,6 +298,10 @@
           <span class="total-label">Ihre Provision (mtl., netto)<button type="button" id="btn-toggle-commission" class="commission-toggle" title="Provision ein-/ausblenden">Anzeigen</button></span>
           <span class="total-value" id="total-commission">–</span>
         </div>
+        <div class="total-row onetime" id="row-commission-onetime" hidden>
+          <span class="total-label">Ihre Provision (einmalig, netto)<button type="button" id="btn-toggle-commission-onetime" class="commission-toggle" title="Provision ein-/ausblenden">Anzeigen</button></span>
+          <span class="total-value" id="total-commission-onetime">–</span>
+        </div>
         <span class="total-note">Alle Preise zzgl. gesetzlicher MwSt. Unverbindliche Kalkulation auf Basis der aktuellen Preisliste, vorbehaltlich individueller Abstimmung.</span>
       </div>
       <div class="bemerkung-field">
@@ -601,6 +605,7 @@
       renderOverview();
       refreshOnboardingAll();
       document.getElementById('row-commission').hidden = true;
+      document.getElementById('row-commission-onetime').hidden = true;
       return;
     }
 
@@ -636,21 +641,23 @@
   // serverseitig und werden dem Partner nie ausgeliefert, nur der fertige
   // Provisionsbetrag kommt zurück.
   let commissionDebounce = null;
-  let commissionVisible = false;
-  let lastCommission = null;
 
-  function renderCommissionValue(){
-    const valueEl = document.getElementById('total-commission');
-    const toggleBtn = document.getElementById('btn-toggle-commission');
-    if (lastCommission === null){ valueEl.textContent = '–'; return; }
-    valueEl.textContent = commissionVisible ? fmtEUR(lastCommission) : '••••••';
-    toggleBtn.textContent = commissionVisible ? 'Ausblenden' : 'Anzeigen';
+  function makeCommissionField(valueId, toggleId){
+    let visible = false;
+    let value = null;
+    const valueEl = document.getElementById(valueId);
+    const toggleBtn = document.getElementById(toggleId);
+    function render(){
+      if (value === null){ valueEl.textContent = '–'; return; }
+      valueEl.textContent = visible ? fmtEUR(value) : '••••••';
+      toggleBtn.textContent = visible ? 'Ausblenden' : 'Anzeigen';
+    }
+    toggleBtn.addEventListener('click', () => { visible = !visible; render(); });
+    return { setValue(v){ value = v; render(); } };
   }
 
-  document.getElementById('btn-toggle-commission').addEventListener('click', () => {
-    commissionVisible = !commissionVisible;
-    renderCommissionValue();
-  });
+  const commissionField = makeCommissionField('total-commission', 'btn-toggle-commission');
+  const commissionOnetimeField = makeCommissionField('total-commission-onetime', 'btn-toggle-commission-onetime');
 
   function updateCommission(){
     clearTimeout(commissionDebounce);
@@ -659,8 +666,9 @@
 
   async function fetchCommission(){
     const row = document.getElementById('row-commission');
+    const rowOnetime = document.getElementById('row-commission-onetime');
     const session = window.currentSession;
-    if (!session){ row.hidden = true; return; }
+    if (!session){ row.hidden = true; rowOnetime.hidden = true; return; }
 
     try {
       const res = await fetch('/api/commission', {
@@ -668,13 +676,15 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
         body: JSON.stringify({ selections: qty, adjust })
       });
-      if (!res.ok){ row.hidden = true; return; }
+      if (!res.ok){ row.hidden = true; rowOnetime.hidden = true; return; }
       const data = await res.json();
-      lastCommission = data.commission;
-      renderCommissionValue();
+      commissionField.setValue(data.commission);
+      commissionOnetimeField.setValue(data.commissionOnetime);
       row.hidden = false;
+      rowOnetime.hidden = false;
     } catch (err) {
       row.hidden = true;
+      rowOnetime.hidden = true;
     }
   }
 

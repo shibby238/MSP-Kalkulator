@@ -2,7 +2,11 @@
 // EK-Preise, Provisionssatz und Marge verlassen diese Function NIE –
 // die Antwort an den Client enthält ausschließlich den fertigen Betrag.
 const { createClient } = require('@supabase/supabase-js');
-const { CATEGORIES } = require('../pricing-data.js');
+const { CATEGORIES, ONETIME, AUTO_ONBOARDING } = require('../pricing-data.js');
+
+// Feste Provision auf Onboarding-Pauschalen: EK wird hier bewusst mit 0
+// angesetzt, die Provision entspricht also 30 % des vollen VK-Betrags.
+const ONBOARDING_COMMISSION_RATE = 0.3;
 
 function tierFor(item, q) {
   if (!item.tiered) return null;
@@ -12,6 +16,17 @@ function tierFor(item, q) {
 
 function vkUnitPrice(item, q) {
   return item.tiered ? tierFor(item, q).price : item.price;
+}
+
+function categoryVkTotal(catId, selections, adjust) {
+  const cat = CATEGORIES.find(c => c.id === catId);
+  if (!cat) return 0;
+  return cat.items.reduce((sum, item) => {
+    const q = Number(selections[item.id]) || 0;
+    if (q <= 0) return sum;
+    const pct = Number(adjust[item.id]) || 0;
+    return sum + q * vkUnitPrice(item, q) * (1 + pct / 100);
+  }, 0);
 }
 
 function buildEkLookup(flatCosts, tieredCosts) {
@@ -105,5 +120,35 @@ module.exports = async (req, res) => {
   const rate = Number(partner.commission_rate) || 0;
   const commission = Math.max(0, (vkTotal - ekTotal) * rate);
 
-  res.status(200).json({ commission: Math.round(commission * 100) / 100 });
+  // Einmalige Onboarding-Pauschalen (ONETIME/AUTO_ONBOARDING): eigene, feste
+  // Provision von 30 % auf den vollen VK-Betrag (EK wird hier nicht geführt).
+  let onboardingVkTotal = 0;
+
+  ONETIME.forEach(item => {
+    const pct = Number(adjust[item.id]) || 0;
+    if (item.dynamic) {
+      const base = categoryVkTotal(item.dynamic, selections, adjust);
+      const capped = Math.min(base, item.cap);
+      const final = capped * (1 + pct / 100);
+      if (final > 0) onboardingVkTotal += final;
+    } else {
+      const q = Number(selections[item.id]) || 0;
+      if (q > 0) onboardingVkTotal += q * item.price * (1 + pct / 100);
+    }
+  });
+
+  AUTO_ONBOARDING.forEach(rule => {
+    const triggered = rule.triggerIds.some(id => (Number(selections[id]) || 0) > 0);
+    if (triggered) {
+      const pct = Number(adjust[rule.id]) || 0;
+      onboardingVkTotal += rule.price * (1 + pct / 100);
+    }
+  });
+
+  const commissionOnetime = Math.max(0, onboardingVkTotal * ONBOARDING_COMMISSION_RATE);
+
+  res.status(200).json({
+    commission: Math.round(commission * 100) / 100,
+    commissionOnetime: Math.round(commissionOnetime * 100) / 100
+  });
 };
